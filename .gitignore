@@ -1,0 +1,41 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Virtual environments
+env/
+.env/
+.venv/
+venv/
+
+# Local environment files
+.env.*
+!.env.example
+
+# Lambda build artifacts
+lambda.zip
+lambdas/*/lambda.zip
+lambdas/*/package/
+lambdas/*/nltk_data/
+
+# Generated local test files
+sample-review*.json
+event.json
+response.json
+tmp_reviews/
+
+# OS and editor files
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+
+# Logs
+*.log
