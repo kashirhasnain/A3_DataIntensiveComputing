@@ -1,7 +1,7 @@
 boto3
 requests
 Pillow
-nltk==3.9.1
+nltk==3.9.4
 mypy-boto3-ssm
 mypy-boto3-sns
 mypy-boto3-s3
