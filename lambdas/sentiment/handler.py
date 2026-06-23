@@ -64,6 +64,17 @@ def extract_review_text(review_data: dict) -> str:
 
     return f"{summary} {review_text}"
 
+
+def extract_review_metadata(review_data: dict) -> dict:
+    review = review_data.get("review", {})
+
+    return {
+        "reviewerID": review.get("reviewerID"),
+        "asin": review.get("asin"),
+        "overall": review.get("overall"),
+    }
+
+
 def classify_sentiment(text: str) -> str:
     scores = sia.polarity_scores(text)
     compound = scores["compound"]
@@ -75,34 +86,47 @@ def classify_sentiment(text: str) -> str:
     else:
         return "neutral"
     
+def get_bucket_names() -> dict:
+    return {
+        "profanity": get_ssm_parameter(PROFANITY_BUCKET_PARAMETER),
+    }
+    
 
 def handler(event, context):
     print(json.dumps(event))
+
+    processed = []
 
     for record in iter_s3_records(event):
         bucket = record["s3"]["bucket"]["name"]
         key = unquote_plus(record["s3"]["object"]["key"])
 
-        print(f"Bucket: {bucket}")
-        print(f"Key: {key}")
+        review_data = read_review(bucket, key)
+
+        text = extract_review_text(review_data)
+        sentiment = classify_sentiment(text)
+
+        print(
+            json.dumps(
+                {
+                    "bucket": bucket,
+                    "key": key,
+                    "text": text,
+                    "sentiment": sentiment,
+                }
+            )
+        )
+
+        processed.append(
+            {
+                "bucket": bucket,
+                "key": key,
+                "sentiment": sentiment,
+            }
+        )
 
     return {
         "statusCode": 200,
-        "message": "Sentiment Lambda triggered"
+        "processed": processed,
     }
-
-
-
-
-
-
-
-
-
-    
-
-
-
-
-
 
