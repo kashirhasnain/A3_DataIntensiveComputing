@@ -17,6 +17,12 @@ if os.getenv("STAGE") == "local":
 s3: "S3Client" = boto3.client("s3", endpoint_url=endpoint_url)
 ssm: "SSMClient" = boto3.client("ssm", endpoint_url=endpoint_url)
 
+dynamodb = boto3.resource(
+    "dynamodb",
+    endpoint_url=endpoint_url,
+    region_name="us-east-1",
+)
+
 sia = SentimentIntensityAnalyzer()
 
 
@@ -90,6 +96,28 @@ def get_bucket_names() -> dict:
     return {
         "profanity": get_ssm_parameter(PROFANITY_BUCKET_PARAMETER),
     }
+
+def get_table_name() -> str:
+    return get_ssm_parameter(DYNAMODB_TABLE_PARAMETER)
+
+
+def save_to_dynamodb(
+    table_name: str,
+    key: str,
+    metadata: dict,
+    sentiment: str,
+) -> None:
+    table = dynamodb.Table(table_name)
+
+    table.put_item(
+        Item={
+            "reviewId": key,
+            "reviewerID": metadata.get("reviewerID"),
+            "asin": metadata.get("asin"),
+            "overall": metadata.get("overall"),
+            "sentiment": sentiment,
+        }
+    )
     
 
 def handler(event, context):
@@ -105,6 +133,16 @@ def handler(event, context):
 
         text = extract_review_text(review_data)
         sentiment = classify_sentiment(text)
+        metadata = extract_review_metadata(review_data)
+
+        table_name = get_table_name()
+
+        save_to_dynamodb(
+            table_name=table_name,
+            key=key,
+            metadata=metadata,
+            sentiment=sentiment,
+        )
 
         print(
             json.dumps(
