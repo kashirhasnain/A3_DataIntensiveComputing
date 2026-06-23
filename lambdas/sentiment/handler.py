@@ -106,6 +106,7 @@ def save_to_dynamodb(
     key: str,
     metadata: dict,
     sentiment: str,
+    profanity_flag: bool,
 ) -> None:
     table = dynamodb.Table(table_name)
 
@@ -116,6 +117,7 @@ def save_to_dynamodb(
             "asin": metadata.get("asin"),
             "overall": metadata.get("overall"),
             "sentiment": sentiment,
+            "profanityFlag": profanity_flag,
         }
     )
     
@@ -134,6 +136,7 @@ def handler(event, context):
         text = extract_review_text(review_data)
         sentiment = classify_sentiment(text)
         metadata = extract_review_metadata(review_data)
+        profanity_flag = review_data.get("profanityFlag", False)
 
         table_name = get_table_name()
 
@@ -142,6 +145,7 @@ def handler(event, context):
             key=key,
             metadata=metadata,
             sentiment=sentiment,
+            profanity_flag=profanity_flag,
         )
 
         print(
