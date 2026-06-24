@@ -1,6 +1,7 @@
 import json
 import os
 import typing
+import nltk
 from urllib.parse import unquote_plus
 
 import boto3
@@ -14,6 +15,18 @@ endpoint_url = None
 if os.getenv("STAGE") == "local":
     endpoint_url = "http://localhost:4566"
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+nltk.data.path.extend(
+    [
+        os.path.join(BASE_DIR, "nltk_data"),
+        os.path.join(BASE_DIR, "package", "nltk_data"),
+        "/var/task/nltk_data",
+        "/var/task/package/nltk_data",
+        "/opt/nltk_data",
+        "/tmp/nltk_data",
+    ]
+)
+
 s3: "S3Client" = boto3.client("s3", endpoint_url=endpoint_url)
 ssm: "SSMClient" = boto3.client("ssm", endpoint_url=endpoint_url)
 
@@ -23,7 +36,6 @@ dynamodb = boto3.resource(
     region_name="us-east-1",
 )
 
-sia = SentimentIntensityAnalyzer()
 
 
 
@@ -80,9 +92,11 @@ def extract_review_metadata(review_data: dict) -> dict:
         "overall": review.get("overall"),
     }
 
+def get_sentiment_analyzer() -> SentimentIntensityAnalyzer:
+    return SentimentIntensityAnalyzer()
 
 def classify_sentiment(text: str) -> str:
-    scores = sia.polarity_scores(text)
+    scores = get_sentiment_analyzer().polarity_scores(text)
     compound = scores["compound"]
 
     if compound >= 0.05:
