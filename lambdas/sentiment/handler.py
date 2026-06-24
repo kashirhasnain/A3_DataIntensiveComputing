@@ -3,6 +3,7 @@ import os
 import typing
 import nltk
 from urllib.parse import unquote_plus
+from functools import lru_cache
 
 import boto3
 from nltk.sentiment import SentimentIntensityAnalyzer
@@ -92,6 +93,7 @@ def extract_review_metadata(review_data: dict) -> dict:
         "overall": review.get("overall"),
     }
 
+@lru_cache(maxsize=1)
 def get_sentiment_analyzer() -> SentimentIntensityAnalyzer:
     return SentimentIntensityAnalyzer()
 
@@ -140,10 +142,16 @@ def handler(event, context):
     print(json.dumps(event))
 
     processed = []
+    expected_bucket = get_bucket_names()["profanity"]
 
     for record in iter_s3_records(event):
         bucket = record["s3"]["bucket"]["name"]
         key = unquote_plus(record["s3"]["object"]["key"])
+
+        if bucket != expected_bucket:
+            raise ValueError(
+                f"unexpected source bucket {bucket!r}; expected {expected_bucket!r}"
+    )
 
         review_data = read_review(bucket, key)
 
@@ -178,6 +186,8 @@ def handler(event, context):
                 "bucket": bucket,
                 "key": key,
                 "sentiment": sentiment,
+                "overall": metadata.get("overall"),
+                "profanityFlag": profanity_flag,
             }
         )
 
