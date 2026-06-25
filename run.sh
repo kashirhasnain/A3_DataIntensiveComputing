@@ -157,6 +157,59 @@ ${AWS} s3api put-bucket-notification-configuration \
 [\"s3:ObjectCreated:*\"]}]}"
 
 ### Create the static s3 webapp
+
+### Create the profanity-checked bucket
+${AWS} s3 mb s3://review-profanity-checked
+
+### Put the profanity bucket and table names into SSM parameter store
+${AWS} ssm put-parameter --name /review-analysis/buckets/profanity-checked --type "String" --value "review-profanity-checked" --overwrite
+${AWS} ssm put-parameter --name /review-analysis/tables/impolite-counts --type "String" --value "review-impolite-counts" --overwrite
+${AWS} ssm put-parameter --name /review-analysis/tables/banned-customers --type "String" --value "review-banned-customers" --overwrite
+
+### Create DynamoDB tables for impolite counts and banned customers
+${AWS} dynamodb create-table \
+ --table-name review-impolite-counts \
+ --attribute-definitions AttributeName=reviewerID,AttributeType=S \
+ --key-schema AttributeName=reviewerID,KeyType=HASH \
+ --billing-mode PAY_PER_REQUEST
+
+${AWS} dynamodb create-table \
+ --table-name review-banned-customers \
+ --attribute-definitions AttributeName=reviewerID,AttributeType=S \
+ --key-schema AttributeName=reviewerID,KeyType=HASH \
+ --billing-mode PAY_PER_REQUEST
+
+#### Profanity Check Lambda
+(
+ cd lambdas/profanity_check
+ rm -rf package lambda.zip
+ mkdir package
+ pip install -r requirements.txt -t package
+ zip lambda.zip handler.py
+ cd package
+ zip -r ../lambda.zip *;
+)
+${AWS} lambda create-function \
+ --function-name profanity_check \
+ --runtime python3.11 \
+ --timeout 30 \
+ --zip-file fileb://lambdas/profanity_check/lambda.zip \
+ --handler handler.handler \
+ --role arn:aws:iam::000000000000:role/lambda-role \
+ --environment "{\"Variables\":{\"STAGE\":\"local\"}}"
+
+PROFANITY_CHECK_ARN=$(${AWS} lambda get-function \
+ --function-name profanity_check \
+ --query 'Configuration.FunctionArn' \
+ --output text)
+
+### Connect the preprocessed S3 bucket to the profanity check lambda
+${AWS} s3api put-bucket-notification-configuration \
+ --bucket review-preprocessed \
+ --notification-configuration "{\"LambdaFunctionConfigurations\":
+[{\"LambdaFunctionArn\": \"${PROFANITY_CHECK_ARN}\", \"Events\":
+[\"s3:ObjectCreated:*\"]}]}"
+
 ${AWS} s3 mb s3://webapp
 ${AWS} s3 website s3://webapp --index-document index.html
 ${AWS} s3 sync --delete ./website s3://webapp   --exclude ".ipynb_checkpoints/*"
