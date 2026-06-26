@@ -245,6 +245,18 @@ ${AWS} s3api put-bucket-notification-configuration \
 [{\"LambdaFunctionArn\": \"${PROFANITY_CHECK_ARN}\", \"Events\":
 [\"s3:ObjectCreated:*\"]}]}"
 
+SENTIMENT_ARN=$(${AWS} lambda get-function \
+ --function-name sentiment \
+ --query 'Configuration.FunctionArn' \
+ --output text)
+
+### Connect the profanity-checked bucket to the sentiment lambda
+${AWS} s3api put-bucket-notification-configuration \
+ --bucket review-profanity-checked \
+ --notification-configuration "{\"LambdaFunctionConfigurations\":
+[{\"LambdaFunctionArn\": \"${SENTIMENT_ARN}\", \"Events\":
+[\"s3:ObjectCreated:*\"]}]}"
+
 ${AWS} s3 mb s3://webapp
 ${AWS} s3 website s3://webapp --index-document index.html
 ${AWS} s3 sync --delete ./website s3://webapp   --exclude ".ipynb_checkpoints/*"
@@ -257,3 +269,4 @@ echo "Public list URL: ${PUBLIC_BASE_URL}/2015-03-31/functions/list/invocations"
 if [ -n "${S3_ENDPOINT_URL}" ]; then
   echo "Public S3 endpoint URL: ${S3_ENDPOINT_URL}"
 fi
+

@@ -42,7 +42,7 @@ dynamodb = boto3.resource(
 
 PROFANITY_BUCKET_PARAMETER = os.getenv(
     "PROFANITY_BUCKET_PARAMETER",
-    "/review-analysis/buckets/profanity",
+    "/review-analysis/buckets/profanity-checked",
 )
 
 DYNAMODB_TABLE_PARAMETER = os.getenv(
@@ -158,8 +158,7 @@ def handler(event, context):
         text = extract_review_text(review_data)
         sentiment = classify_sentiment(text)
         metadata = extract_review_metadata(review_data)
-        profanity_flag = review_data.get("profanityFlag", False)
-
+        profanity_flag = review_data.get("profanity", {}).get("is_profane", False)
         table_name = get_table_name()
 
         save_to_dynamodb(
