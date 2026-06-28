@@ -123,13 +123,16 @@ def write_preprocessed_review(
     target_key: str,
     source_bucket: str,
     source_key: str,
+    original_review: dict,
     review_fields: dict,
     preprocessed_fields: dict,
 ) -> None:
     payload = {
         "sourceBucket": source_bucket,
         "sourceKey": source_key,
-        "review": review_fields,
+        # Full original review so downstream lambdas have reviewerID, asin, etc.
+        "review": original_review,
+        # Only the three NLP-relevant fields, preprocessed
         "preprocessed": preprocessed_fields,
     }
     s3.put_object(
@@ -163,6 +166,7 @@ def handler(event, context):
             target_key=key,
             source_bucket=bucket,
             source_key=key,
+            original_review=review,
             review_fields=review_fields,
             preprocessed_fields=preprocessed_fields,
         )

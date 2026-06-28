@@ -133,7 +133,8 @@ def handler(event, context):
         review_text = review.get("reviewText", "")
 
         source_key = data.get("sourceKey", key)
-        reviewer_id = data.get("reviewerID") or source_key
+        # reviewerID is nested inside the forwarded review object
+        reviewer_id = data.get("review", {}).get("reviewerID") or source_key
 
         summary_profane = check_profanity(summary)
         review_text_profane = check_profanity(review_text)
