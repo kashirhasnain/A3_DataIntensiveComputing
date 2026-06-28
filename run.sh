@@ -58,6 +58,20 @@ ${AWS} ssm put-parameter --name /ministack-thumbnail-app/buckets/resized --type 
 ${AWS} ssm put-parameter --name /review-analysis/buckets/raw --type "String" --value "review-raw" --overwrite
 ${AWS} ssm put-parameter --name /review-analysis/buckets/preprocessed --type "String" --value "review-preprocessed" --overwrite
 
+
+### Create DynamoDB table for sentiment results
+${AWS} dynamodb create-table \
+ --table-name review-results \
+ --attribute-definitions AttributeName=reviewId,AttributeType=S \
+ --key-schema AttributeName=reviewId,KeyType=HASH \
+ --billing-mode PAY_PER_REQUEST
+
+### Store table name in SSM
+${AWS} ssm put-parameter \
+ --name /review-analysis/tables/reviews \
+ --type "String" \
+ --value "review-results" \
+ --overwrite
 ### Create the lambdas
 #### S3 pre-signed POST URL generator
 ##### This Lambda is responsible for generating pre-signed POST URLs to upload files to an S3 bucket.
@@ -156,6 +170,27 @@ ${AWS} s3api put-bucket-notification-configuration \
 [{\"LambdaFunctionArn\": \"${PREPROCESS_ARN}\", \"Events\":
 [\"s3:ObjectCreated:*\"]}]}"
 
+#### Review sentiment Lambda
+(
+ cd lambdas/sentiment
+ rm -rf package lambda.zip
+ mkdir package
+ pip install -r requirements.txt -t package
+ PYTHONPATH=package python -m nltk.downloader -d package/nltk_data vader_lexicon
+ zip lambda.zip handler.py
+ cd package
+ zip -r ../lambda.zip *;
+)
+
+${AWS} lambda create-function \
+ --function-name sentiment \
+ --runtime python3.11 \
+ --timeout 30 \
+ --zip-file fileb://lambdas/sentiment/lambda.zip \
+ --handler handler.handler \
+ --role arn:aws:iam::000000000000:role/lambda-role \
+ --environment "{\"Variables\":{\"STAGE\":\"local\",\"NLTK_DATA\":\"/var/task/nltk_data\"}}"
+
 ### Create the static s3 webapp
 
 ### Create the profanity-checked bucket
@@ -210,6 +245,18 @@ ${AWS} s3api put-bucket-notification-configuration \
 [{\"LambdaFunctionArn\": \"${PROFANITY_CHECK_ARN}\", \"Events\":
 [\"s3:ObjectCreated:*\"]}]}"
 
+SENTIMENT_ARN=$(${AWS} lambda get-function \
+ --function-name sentiment \
+ --query 'Configuration.FunctionArn' \
+ --output text)
+
+### Connect the profanity-checked bucket to the sentiment lambda
+${AWS} s3api put-bucket-notification-configuration \
+ --bucket review-profanity-checked \
+ --notification-configuration "{\"LambdaFunctionConfigurations\":
+[{\"LambdaFunctionArn\": \"${SENTIMENT_ARN}\", \"Events\":
+[\"s3:ObjectCreated:*\"]}]}"
+
 ${AWS} s3 mb s3://webapp
 ${AWS} s3 website s3://webapp --index-document index.html
 ${AWS} s3 sync --delete ./website s3://webapp   --exclude ".ipynb_checkpoints/*"
@@ -222,3 +269,4 @@ echo "Public list URL: ${PUBLIC_BASE_URL}/2015-03-31/functions/list/invocations"
 if [ -n "${S3_ENDPOINT_URL}" ]; then
   echo "Public S3 endpoint URL: ${S3_ENDPOINT_URL}"
 fi
+
