@@ -6,6 +6,9 @@ export ALLOWED_ORIGINS="${ALLOWED_ORIGINS:-http://localhost:4566,http://127.0.0.
 export MINISTACK_ENDPOINT=http://localhost:4566
 export MSYS_NO_PATHCONV=1
 
+# Path to the Python zip helper (relative to project root, avoids spaces-in-path issues)
+ZIPPER="zip_lambda.py"
+
 if aws --version >/dev/null 2>&1; then
   AWS="aws --endpoint-url=${MINISTACK_ENDPOINT}"
 elif python -m awscli --version >/dev/null 2>&1; then
@@ -75,7 +78,7 @@ ${AWS} ssm put-parameter \
 ### Create the lambdas
 #### S3 pre-signed POST URL generator
 ##### This Lambda is responsible for generating pre-signed POST URLs to upload files to an S3 bucket.
-(cd lambdas/presign; rm -f lambda.zip; zip lambda.zip handler.py)
+(cd lambdas/presign; rm -f lambda.zip; python ../../$ZIPPER create lambda.zip handler.py)
 ${AWS} lambda create-function \
  --function-name presign \
  --runtime python3.11 \
@@ -92,7 +95,7 @@ ${AWS} lambda create-function-url-config \
 
 #### Image lister lambda
 ##### The list Lambda is very similar:
-(cd lambdas/list; rm -f lambda.zip; zip lambda.zip handler.py)
+(cd lambdas/list; rm -f lambda.zip; python ../../$ZIPPER create lambda.zip handler.py)
 ${AWS} lambda create-function \
  --function-name list \
  --handler handler.handler \
@@ -112,9 +115,8 @@ ${AWS} lambda create-function-url-config \
  rm -rf package lambda.zip
  mkdir package
  pip install -r requirements.txt -t package --platform manylinux2014_x86_64 --only-binary=:all:
- zip lambda.zip handler.py
- cd package
- zip -r ../lambda.zip *;
+ python ../../$ZIPPER create lambda.zip handler.py
+ python ../../$ZIPPER add lambda.zip package
 )
 ${AWS} lambda create-function \
  --function-name resize \
@@ -145,9 +147,8 @@ ${AWS} s3api put-bucket-notification-configuration \
  mkdir package
  pip install -r requirements.txt -t package
  PYTHONPATH=package python -m nltk.downloader -d package/nltk_data punkt punkt_tab stopwords wordnet omw-1.4
- zip lambda.zip handler.py
- cd package
- zip -r ../lambda.zip *;
+ python ../../$ZIPPER create lambda.zip handler.py
+ python ../../$ZIPPER add lambda.zip package
 )
 ${AWS} lambda create-function \
  --function-name preprocess \
@@ -177,9 +178,8 @@ ${AWS} s3api put-bucket-notification-configuration \
  mkdir package
  pip install -r requirements.txt -t package
  PYTHONPATH=package python -m nltk.downloader -d package/nltk_data vader_lexicon
- zip lambda.zip handler.py
- cd package
- zip -r ../lambda.zip *;
+ python ../../$ZIPPER create lambda.zip handler.py
+ python ../../$ZIPPER add lambda.zip package
 )
 
 ${AWS} lambda create-function \
@@ -220,9 +220,8 @@ ${AWS} dynamodb create-table \
  rm -rf package lambda.zip
  mkdir package
  pip install -r requirements.txt -t package
- zip lambda.zip handler.py
- cd package
- zip -r ../lambda.zip *;
+ python ../../$ZIPPER create lambda.zip handler.py
+ python ../../$ZIPPER add lambda.zip package
 )
 ${AWS} lambda create-function \
  --function-name profanity_check \
