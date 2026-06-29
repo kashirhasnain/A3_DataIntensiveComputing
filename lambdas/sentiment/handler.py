@@ -1,4 +1,6 @@
 import json
+from decimal import Decimal
+
 import os
 import typing
 import nltk
@@ -126,12 +128,15 @@ def save_to_dynamodb(
 ) -> None:
     table = dynamodb.Table(table_name)
 
+    overall = metadata.get("overall")
+    overall_decimal = Decimal(str(overall)) if overall is not None else None
+
     table.put_item(
         Item={
             "reviewId": key,
             "reviewerID": metadata.get("reviewerID"),
             "asin": metadata.get("asin"),
-            "overall": metadata.get("overall"),
+            "overall": overall_decimal,
             "sentiment": sentiment,
             "profanityFlag": profanity_flag,
         }
