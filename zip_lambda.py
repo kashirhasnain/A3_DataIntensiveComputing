@@ -1,12 +1,4 @@
-#!/usr/bin/env python3
-"""
-zip_lambda.py -- Windows-compatible zip helper for Lambda packaging.
-Called by run.sh instead of the 'zip' command (not available on Windows Git Bash).
 
-Usage:
-    python /path/to/zip_lambda.py create <output.zip> <file>
-    python /path/to/zip_lambda.py add    <output.zip> <directory>
-"""
 import os
 import sys
 import zipfile

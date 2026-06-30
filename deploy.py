@@ -1,17 +1,4 @@
-#!/usr/bin/env python3
-"""
-deploy.py — Pure Python deployment script for the Review Analysis pipeline.
 
-Does exactly what run.sh does, but using only Python (boto3 + zipfile + subprocess).
-No bash required. No 'zip' command required. No AWS CLI on PATH required.
-
-HOW TO RUN (from the project root in PowerShell or CMD):
-    python deploy.py
-
-REQUIREMENTS:
-    - MiniStack must already be running in another terminal (run: ministack)
-    - pip packages from requirements.txt must be installed
-"""
 
 import io
 import json
@@ -99,15 +86,7 @@ def create_table(table_name, key_name):
 
 
 def build_lambda_zip(lambda_dir: str, nltk_corpora: list = None) -> bytes:
-    """
-    Package a Lambda function into a zip file in memory.
-    Returns the raw zip bytes ready to upload.
-
-    Steps:
-      1. pip install -r requirements.txt into a temp 'package' folder
-      2. Download NLTK corpora if needed
-      3. Zip handler.py + all package contents into memory
-    """
+    
     abs_dir  = os.path.join(PROJECT_ROOT, lambda_dir)
     pkg_dir  = os.path.join(abs_dir, "package")
     req_file = os.path.join(abs_dir, "requirements.txt")

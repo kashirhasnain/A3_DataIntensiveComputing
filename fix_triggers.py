@@ -1,13 +1,4 @@
-#!/usr/bin/env python3
-"""
-fix_triggers.py — Re-wires all S3 bucket notification triggers.
 
-Run this whenever the Lambda S3 triggers are broken (e.g. after re-running
-run.sh on top of an existing deployment).
-
-Usage:
-    python fix_triggers.py
-"""
 import os
 import boto3
 from botocore.exceptions import ClientError

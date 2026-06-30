@@ -1,11 +1,4 @@
-# =============================================================================
-# run.ps1  —  Windows PowerShell equivalent of run.sh
-# Deploys the full Review Analysis pipeline to MiniStack (LocalStack)
-#
-# HOW TO RUN (from project root in PowerShell):
-#   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-#   .\run.ps1
-# =============================================================================
+
 
 $ErrorActionPreference = "Continue"   # keep going even if one step errors (e.g. bucket already exists)
 

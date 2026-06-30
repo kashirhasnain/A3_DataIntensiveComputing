@@ -334,14 +334,7 @@ class TestSentimentAnalysis:
     def _run_full_pipeline_and_get_dynamo_item(
         self, resources: dict, review: dict, key: str
     ) -> dict:
-        """
-        Upload a review, wait for EACH S3 stage, then return the DynamoDB item.
-
-        Hops:
-          1. review-raw         -> preprocess Lambda   -> review-preprocessed
-          2. review-preprocessed -> profanity_check    -> review-profanity-checked
-          3. review-profanity-checked -> sentiment     -> DynamoDB review-results
-        """
+       
         raw_bucket       = resources["raw_bucket"]
         preprocessed     = resources["preprocessed_bucket"]
         profanity_bucket = resources["profanity_bucket"]
